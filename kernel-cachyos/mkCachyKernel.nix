@@ -77,10 +77,21 @@ let
       description = "Linux CachyOS Kernel" + lib.optionalString lto " with Clang+ThinLTO";
     };
   };
+
+  zfsPackage = callPackage ../zfs-cachyos {
+    inherit inputs;
+    kernel = kernelPackage;
+  };
 in
 [
   (lib.nameValuePair "linux-cachyos-${pnameSuffix}" kernelPackage)
   (lib.nameValuePair "linuxPackages-cachyos-${pnameSuffix}" (
-    kernelModuleLLVMOverride (linuxKernel.packagesFor kernelPackage)
+    kernelModuleLLVMOverride (
+      (linuxKernel.packagesFor kernelPackage).extend (
+        final: prev: {
+          zfs_cachyos = zfsPackage;
+        }
+      )
+    )
   ))
 ]

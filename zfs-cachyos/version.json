@@ -1,0 +1,15 @@
+{
+  "zfs_branch": "zfs-2.3.6-cachyos",
+  "url": "https://github.com/CachyOS/zfs.git",
+  "rev": "4ddaf45ba468c6953a4fcdbfe79795f74fa6e489",
+  "date": "2025-03-13T10:35:31-04:00",
+  "path": "/nix/store/clbq55q8pca9im5jsr28g472x0l0y50w-zfs",
+  "sha256": "07gh7x7lwq013ni4jb6vxavhf348g8zl3db65sz408lsp2bpx0v5",
+  "hash": "sha256-ZYN+l7iaIkC+Lma1QT96iAwHt+rbLEmiHQFgTk8/8B0=",
+  "fetchLFS": false,
+  "fetchSubmodules": false,
+  "deepClone": false,
+  "fetchTags": false,
+  "leaveDotGit": false,
+  "rootDir": ""
+}

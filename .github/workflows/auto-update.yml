@@ -58,9 +58,14 @@ jobs:
           sudo systemctl restart nix-daemon
 
       - name: Build nix packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export TMPDIR=/nix/tmpdir
           nix flake update
+
+          chmod +x zfs-cachyos/update.py
+          zfs-cachyos/update.py
 
       - env:
           API_TOKEN_GITHUB: ${{ secrets.AUTOMERGE_TOKEN }}

@@ -1,6 +1,6 @@
 # Nix packages for CachyOS Kernel
 
-This repo contains Linux kernels with both [CachyOS patches](https://github.com/CachyOS/kernel-patches) and [CachyOS tunings](https://github.com/CachyOS/linux-cachyos).
+This repo contains Linux kernels with both [CachyOS patches](https://github.com/CachyOS/kernel-patches) and [CachyOS tunings](https://github.com/CachyOS/linux-cachyos), as well as [CachyOS-patched ZFS module](https://github.com/CachyOS/zfs).
 
 ## Which kernel versions are provided?
 
@@ -29,7 +29,7 @@ For each linux kernel entry under `packages`, we have a corresponding `linuxPack
 - `linux-cachyos-latest` -> `inputs.nix-cachyos-kernel.legacyPackages.x86_64-linux.linuxPackages-cachyos-latest`
 - `linux-cachyos-lts-lto` -> `inputs.nix-cachyos-kernel.legacyPackages.x86_64-linux.linuxPackages-cachyos-lts-lto`
 
-## How to use
+## How to use kernels
 
 Add this repo to the inputs section of your `flake.nix`:
 
@@ -57,6 +57,62 @@ Then specify `pkgs.cachyosKernels.linuxPackages-cachyos-latest` (or other varian
         {
           nixpkgs.overlays = [ self.overlay ];
           boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
+          # ... your other configs
+        }
+      )
+    ];
+  };
+}
+```
+
+## How to use ZFS modules
+
+> Note: CachyOS-patched ZFS module may fail to compile from time to time. Most compilation failures are caused by incompatibilities between kernel and ZFS. Please check [ZFS upstream issues](https://github.com/openzfs/zfs/issues) for any compatibility reports, and try switching between `zfs_2_3`, `zfs_unstable` and `zfs_cachyos`.
+
+To use ZFS module with `linuxPackages-cachyos-*` provided by this flake, point `boot.zfs.package` to `config.boot.kernelPackages.zfs_cachyos`.
+
+```nix
+{
+  nixosConfigurations.example = inputs.nixpkgs.lib.nixosSystem {
+    system = "x86_64-linux";
+    modules = [
+      (
+        { pkgs, ... }:
+        {
+          nixpkgs.overlays = [ self.overlay ];
+          boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
+
+          # ZFS config
+          boot.supportedFilesystems.zfs = true;
+          boot.zfs.package = config.boot.kernelPackages.zfs_cachyos;
+
+          # ... your other configs
+        }
+      )
+    ];
+  };
+}
+```
+
+If you want to construct your own `linuxPackages` attrset with `linuxKernel.packagesFor (path to your kernel)`, you can directly reference the `zfs-cachyos` attribute in this flake's `packages` / `legayPackages` output, or the `cachyosKernels` overlay:
+
+```nix
+{
+  nixosConfigurations.example = inputs.nixpkgs.lib.nixosSystem {
+    system = "x86_64-linux";
+    modules = [
+      (
+        { pkgs, ... }:
+        {
+          nixpkgs.overlays = [ self.overlay ];
+          boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
+
+          # ZFS config
+          boot.supportedFilesystems.zfs = true;
+          boot.zfs.package = pkgs.cachyosKernels.zfs-cachyos.override {
+            kernel = config.boot.kernelPackages.kernel;
+          };
+
           # ... your other configs
         }
       )

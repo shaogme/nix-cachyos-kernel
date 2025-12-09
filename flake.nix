@@ -23,14 +23,24 @@
       let
         loadPackages =
           pkgs:
-          lib.removeAttrs
-            (pkgs.callPackage ./kernel-cachyos {
+          let
+            kernels =
+              lib.removeAttrs
+                (pkgs.callPackage ./kernel-cachyos {
+                  inherit inputs;
+                })
+                [
+                  "override"
+                  "overrideDerivation"
+                ];
+          in
+          kernels
+          // {
+            zfs-cachyos = pkgs.callPackage ./zfs-cachyos {
               inherit inputs;
-            })
-            [
-              "override"
-              "overrideDerivation"
-            ];
+              kernel = kernels.linux-cachyos-latest;
+            };
+          };
       in
       rec {
         systems = [
@@ -57,16 +67,22 @@
             cachyosKernels = loadPackages prev;
           };
 
+          # Example configurations for testing CachyOS kernel
           nixosConfigurations = lib.genAttrs systems (
             system:
             inputs.nixpkgs.lib.nixosSystem {
               inherit system;
               modules = [
                 (
-                  { pkgs, ... }:
+                  { pkgs, config, ... }:
                   {
                     nixpkgs.overlays = [ self.overlay ];
                     boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
+
+                    # ZFS test
+                    boot.supportedFilesystems.zfs = true;
+                    boot.zfs.package = config.boot.kernelPackages.zfs_cachyos;
+                    networking.hostId = "12345678";
 
                     # Minimal config to make test configuration build
                     boot.loader.grub.devices = [ "/dev/vda" ];
