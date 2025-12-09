@@ -24,6 +24,8 @@ This repo provides the latest kernel version and the latest LTS kernel version:
 
 The kernel versions are automatically kept in sync with Nixpkgs, so once the latest/LTS kernel is updated in Nixpkgs, CachyOS kernels in this repo will automatically catch up.
 
+Use `nix flake show github:xddxdd/nix-cachyos-kernel` to see the current effective versions.
+
 The kernels ending in `-lto` has Clang+ThinLTO enabled.
 
 For each linux kernel entry under `packages`, we have a corresponding `linuxPackages` entry under `legacyPackages` for easier use in your NixOS configuration, e.g.:

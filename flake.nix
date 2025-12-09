@@ -3,6 +3,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    flake-compat = {
+      url = "github:NixOS/flake-compat";
+      flake = false;
+    };
 
     cachyos-kernel = {
       url = "github:CachyOS/linux-cachyos";
