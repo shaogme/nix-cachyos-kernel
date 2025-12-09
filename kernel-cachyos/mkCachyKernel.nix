@@ -66,6 +66,15 @@ let
       (
         {
           NR_CPUS = lib.mkForce (option (freeform "8192"));
+
+          # Follow NixOS default config to not break etc overlay
+          OVERLAY_FS = module;
+          OVERLAY_FS_REDIRECT_DIR = no;
+          OVERLAY_FS_REDIRECT_ALWAYS_FOLLOW = yes;
+          OVERLAY_FS_INDEX = no;
+          OVERLAY_FS_XINO_AUTO = no;
+          OVERLAY_FS_METACOPY = no;
+          OVERLAY_FS_DEBUG = no;
         }
         // lib.optionalAttrs lto {
           LTO_NONE = no;
