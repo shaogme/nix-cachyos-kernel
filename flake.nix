@@ -28,17 +28,21 @@
         loadPackages =
           pkgs:
           let
-            kernels =
+            load =
+              path:
               lib.removeAttrs
-                (pkgs.callPackage ./kernel-cachyos {
+                (pkgs.callPackage path {
                   inherit inputs;
                 })
                 [
                   "override"
                   "overrideDerivation"
                 ];
+            kernels = load ./kernel-cachyos;
+            packages = load ./kernel-cachyos/packages.nix;
           in
           kernels
+          // packages
           // {
             zfs-cachyos = pkgs.callPackage ./zfs-cachyos {
               inherit inputs;

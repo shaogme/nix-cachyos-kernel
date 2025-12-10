@@ -5,102 +5,120 @@
   buildLinux,
   stdenv,
   kernelPatches,
-  linuxKernel,
   ...
 }:
-{
-  pnameSuffix,
-  version,
-  src,
-  configVariant,
-  lto,
-}:
-let
-  helpers = callPackage ../helpers.nix { };
-  inherit (helpers) stdenvLLVM ltoMakeflags kernelModuleLLVMOverride;
+lib.makeOverridable (
+  {
+    pname,
+    version,
+    src,
 
-  splitted = lib.splitString "-" version;
-  ver0 = builtins.elemAt splitted 0;
-  major = lib.versions.pad 2 ver0;
+    # Kernel config variant to be used as defconfig, e.g. "linux-cachyos-lts".
+    # See https://github.com/CachyOS/linux-cachyos for available values.
+    configVariant,
 
-  cachyosConfigFile = "${inputs.cachyos-kernel.outPath}/${configVariant}/config";
+    # Set to true to enable Clang+ThinLTO.
+    lto,
 
-  # buildLinux doesn't accept postPatch, so adding config file early here
-  patchedSrc = stdenv.mkDerivation {
-    pname = "linux-cachyos-${pnameSuffix}-src";
-    inherit version src;
-    patches = [
-      kernelPatches.bridge_stp_helper.patch
-      kernelPatches.request_key_helper.patch
-      "${inputs.cachyos-kernel-patches.outPath}/${major}/all/0001-cachyos-base-all.patch"
-    ];
-    postPatch = ''
-      for DIR in arch/*/configs; do
-        install -Dm644 ${cachyosConfigFile} $DIR/cachyos_defconfig
-      done
-    '';
-    dontConfigure = true;
-    dontBuild = true;
-    dontFixup = true;
-    installPhase = ''
-      mkdir -p $out
-      cp -r * $out/
-    '';
-  };
+    # Patches to be applied in patchedSrc phase. This is different from buildLinux's kernelPatches.
+    prePatch ? "",
+    patches ? [ ],
+    postPatch ? "",
 
-  kernelPackage = buildLinux {
-    pname = "linux-cachyos-${pnameSuffix}";
-    inherit version;
-    src = patchedSrc;
-    stdenv = if lto then stdenvLLVM else stdenv;
+    # See nixpkgs/pkgs/os-specific/linux/kernel/generic.nix for additional options.
+    # Additional args are passed to buildLinux.
+    ...
+  }@args:
+  let
+    helpers = callPackage ../helpers.nix { };
+    inherit (helpers) stdenvLLVM ltoMakeflags;
 
-    extraMakeFlags = lib.optionals lto ltoMakeflags;
+    splitted = lib.splitString "-" version;
+    ver0 = builtins.elemAt splitted 0;
+    major = lib.versions.pad 2 ver0;
 
-    defconfig = "cachyos_defconfig";
+    cachyosConfigFile = "${inputs.cachyos-kernel.outPath}/${configVariant}/config";
+    cachyosPatch = "${inputs.cachyos-kernel-patches.outPath}/${major}/all/0001-cachyos-base-all.patch";
 
-    # Clang has some incompatibilities with NixOS's default kernel config
-    ignoreConfigErrors = lto;
-
-    structuredExtraConfig =
-      with lib.kernel;
-      (
-        {
-          NR_CPUS = lib.mkForce (option (freeform "8192"));
-
-          # Follow NixOS default config to not break etc overlay
-          OVERLAY_FS = module;
-          OVERLAY_FS_REDIRECT_DIR = no;
-          OVERLAY_FS_REDIRECT_ALWAYS_FOLLOW = yes;
-          OVERLAY_FS_INDEX = no;
-          OVERLAY_FS_XINO_AUTO = no;
-          OVERLAY_FS_METACOPY = no;
-          OVERLAY_FS_DEBUG = no;
-        }
-        // lib.optionalAttrs lto {
-          LTO_NONE = no;
-          LTO_CLANG_THIN = yes;
-        }
-      );
-
-    extraMeta = {
-      description = "Linux CachyOS Kernel" + lib.optionalString lto " with Clang+ThinLTO";
+    # buildLinux doesn't accept postPatch, so adding config file early here
+    patchedSrc = stdenv.mkDerivation {
+      pname = "${pname}-src";
+      inherit version src prePatch;
+      patches = [
+        kernelPatches.bridge_stp_helper.patch
+        kernelPatches.request_key_helper.patch
+        cachyosPatch
+      ]
+      ++ patches;
+      postPatch = ''
+        for DIR in arch/*/configs; do
+          install -Dm644 ${cachyosConfigFile} $DIR/cachyos_defconfig
+        done
+      ''
+      + postPatch;
+      dontConfigure = true;
+      dontBuild = true;
+      dontFixup = true;
+      installPhase = ''
+        mkdir -p $out
+        cp -r * $out/
+      '';
     };
-  };
+  in
+  buildLinux (
+    (lib.removeAttrs args [
+      "pname"
+      "version"
+      "src"
+      "configVariant"
+      "lto"
+      "prePatch"
+      "patches"
+      "postPatch"
+    ])
+    // {
+      inherit pname version;
+      src = patchedSrc;
+      stdenv = args.stdenv or (if lto then stdenvLLVM else stdenv);
 
-  zfsPackage = callPackage ../zfs-cachyos {
-    inherit inputs;
-    kernel = kernelPackage;
-  };
-in
-[
-  (lib.nameValuePair "linux-cachyos-${pnameSuffix}" kernelPackage)
-  (lib.nameValuePair "linuxPackages-cachyos-${pnameSuffix}" (
-    kernelModuleLLVMOverride (
-      (linuxKernel.packagesFor kernelPackage).extend (
-        final: prev: {
-          zfs_cachyos = zfsPackage;
-        }
-      )
-    )
-  ))
-]
+      extraMakeFlags = (lib.optionals lto ltoMakeflags) ++ (args.extraMakeFlags or [ ]);
+
+      defconfig = args.defconfig or "cachyos_defconfig";
+
+      # Clang has some incompatibilities with NixOS's default kernel config
+      ignoreConfigErrors = args.ignoreConfigErrors or lto;
+
+      structuredExtraConfig =
+        with lib.kernel;
+        (
+          {
+            NR_CPUS = lib.mkForce (option (freeform "8192"));
+
+            # Follow NixOS default config to not break etc overlay
+            OVERLAY_FS = module;
+            OVERLAY_FS_REDIRECT_DIR = no;
+            OVERLAY_FS_REDIRECT_ALWAYS_FOLLOW = yes;
+            OVERLAY_FS_INDEX = no;
+            OVERLAY_FS_XINO_AUTO = no;
+            OVERLAY_FS_METACOPY = no;
+            OVERLAY_FS_DEBUG = no;
+          }
+          // (lib.optionalAttrs lto {
+            LTO_NONE = no;
+            LTO_CLANG_THIN = yes;
+          })
+          // (args.structuredExtraConfig or { })
+        );
+
+      extraMeta = {
+        description = "Linux CachyOS Kernel" + lib.optionalString lto " with Clang+ThinLTO";
+      }
+      // (args.extraMeta or { });
+
+      extraPassthru = {
+        inherit cachyosConfigFile cachyosPatch;
+      }
+      // (args.extraPassthru or { });
+    }
+  )
+)

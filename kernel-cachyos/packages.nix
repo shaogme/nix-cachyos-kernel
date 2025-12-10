@@ -1,14 +1,31 @@
 {
-  mode ? null,
+  inputs,
   callPackage,
   lib,
   linuxKernel,
-  sources,
   ...
 }:
 let
-  kernels = callPackage ./default.nix { inherit mode sources; };
+  helpers = callPackage ../helpers.nix { };
+  inherit (helpers) kernelModuleLLVMOverride;
+
+  kernels = lib.filterAttrs (_: lib.isDerivation) (callPackage ./. { inherit inputs; });
 in
-lib.mapAttrs (n: v: linuxKernel.packagesFor v) (
-  lib.filterAttrs (n: nv: !lib.hasSuffix "configfile" n) kernels
-)
+lib.mapAttrs' (
+  n: v:
+  let
+    zfsPackage = callPackage ../zfs-cachyos {
+      inherit inputs;
+      kernel = v;
+    };
+
+    packages = kernelModuleLLVMOverride (
+      (linuxKernel.packagesFor v).extend (
+        final: prev: {
+          zfs_cachyos = zfsPackage;
+        }
+      )
+    );
+  in
+  lib.nameValuePair "linuxPackages-${lib.removePrefix "linux-" n}" packages
+) kernels

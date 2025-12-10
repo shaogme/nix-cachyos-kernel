@@ -109,7 +109,7 @@ If you want to construct your own `linuxPackages` attrset with `linuxKernel.pack
         { pkgs, ... }:
         {
           nixpkgs.overlays = [ self.overlay ];
-          boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
+          boot.kernelPackages = pkgs.linuxKernel.packagesFor pkgs.cachyosKernels.linux-cachyos-latest;
 
           # ZFS config
           boot.supportedFilesystems.zfs = true;
@@ -122,5 +122,33 @@ If you want to construct your own `linuxPackages` attrset with `linuxKernel.pack
       )
     ];
   };
+}
+```
+
+## How to apply CachyOS patches on your own kernel
+
+The kernels provided in this flake can be overridden to use your own kernel source. This is helpful if you want to use a kernel version not available in Nixpkgs.
+
+```nix
+{
+  kernel = pkgs.cachyosKernels.linux-cachyos-latest.override {
+    pname = "linux-cachyos-with-custom-source";
+    version = "6.12.34";
+    src = pkgs.fetchurl {
+      # ...
+    };
+    # Additional args are available. See kernel-cachyos/mkCachyKernel.nix
+  };
+
+  # For non-LTO kernels
+  kernelPackages = pkgs.linuxKernel.packagesFor kernel;
+
+  # helpers.nix provides a few utilities for building kernel with LTO.
+  # I haven't figured out a clean way to expose it in flakes.
+  helpers = pkgs.callPackage "${inputs.nix-cachyos-kernel.outPath}/helpers.nix" {};
+
+  # For LTO kernels, helpers.kernelModuleLLVMOverride fixes compilation for some
+  # out-of-tree modules in nixpkgs.
+  kernelPackagesWithLTOFix = helpers.kernelModuleLLVMOverride (pkgs.linuxKernel.packagesFor kernel);
 }
 ```
