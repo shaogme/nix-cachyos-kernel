@@ -43,10 +43,11 @@ lib.makeOverridable (
     rt ? false,
 
     # Build as much components as possible as kernel modules, including disabled ones.
-    # This can enable unexpected modules. Disabling by default for as close behavior
-    # as possible compared to upstream.
+    # This can enable unexpected modules, such as nova_core.
     # https://github.com/xddxdd/nix-cachyos-kernel/issues/13
-    autoModules ? false,
+    #
+    # Disabling this causes boot issues for me. Reenabling.
+    autoModules ? true,
 
     # See nixpkgs/pkgs/os-specific/linux/kernel/generic.nix for additional options.
     # Additional args are passed to buildLinux.
@@ -101,6 +102,9 @@ lib.makeOverridable (
       (with lib.kernel; {
         NR_CPUS = lib.mkForce (option (freeform "8192"));
         LOCALVERSION = freeform defaultLocalVersion;
+
+        # https://github.com/xddxdd/nix-cachyos-kernel/issues/13
+        NOVA_CORE = no;
 
         # Follow NixOS default config to not break etc overlay
         OVERLAY_FS = module;
