@@ -47,17 +47,57 @@ For each linux kernel entry under `packages`, we have a corresponding `linuxPack
 
 ## How to use kernels
 
-Add this repo to the inputs section of your `flake.nix`:
+Add the `release` branch this repo to the inputs section of your `flake.nix`:
 
 ```nix
 {
   inputs = {
-    nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel";
+    nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
   }
 }
 ```
 
+The `release` branch contains the latest kernel that has been built by my [Hydra CI](https://hydra.lantian.pub/jobset/lantian/nix-cachyos-kernel) and is present in binary cache.
+
+> If you want the absolute latest version with or without binary cache, use the `master` branch (default branch) instead:
+>
+> ```nix
+> {
+>   inputs = {
+>     nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel";
+>   }
+> }
+> ```
+
 Add the repo's overlay in your NixOS configuration, this will expose the packages in this flake as `pkgs.cachyosKernels.*`.
+
+```nix
+{
+  nixosConfigurations.example = inputs.nixpkgs.lib.nixosSystem {
+    system = "x86_64-linux";
+    modules = [
+      (
+        { pkgs, ... }:
+        {
+          nixpkgs.overlays = [
+            # Build the kernels on top of nixpkgs version in your flake.
+            # Binary cache may be unavailable for the kernel/nixpkgs version combos.
+            self.overlays.default
+
+            # Alternatively: use the exact kernel versions as defined in this repo.
+            # Guarantees you have binary cache.
+            self.overlays.pinned
+
+            # Only use one of the two overlays!
+          ];
+
+          # ... your other configs
+        }
+      )
+    ];
+  };
+}
+```
 
 Then specify `pkgs.cachyosKernels.linuxPackages-cachyos-latest` (or other variants you'd like) in your `boot.kernelPackages` option.
 
@@ -75,7 +115,11 @@ To use my binary cache, please add the following config:
 }
 ```
 
-This repo also has [Garnix CI](https://garnix.io) set up, and should work as long as the total build time is below the free plan threshold:
+This repo also has [Garnix CI](https://garnix.io) set up, and should work as long as the total build time is below the free plan threshold.
+
+[![built with garnix](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fgarnix.io%2Fapi%2Fbadges%2Fxddxdd%2Fnix-cachyos-kernel)](https://garnix.io/repo/xddxdd/nix-cachyos-kernel)
+
+> If you see "all builds failed" from Garnix, it means I ran out of free plan's build time.
 
 ```nix
 {
@@ -94,7 +138,7 @@ This repo also has [Garnix CI](https://garnix.io) set up, and should work as lon
       (
         { pkgs, ... }:
         {
-          nixpkgs.overlays = [ self.overlay ];
+          nixpkgs.overlays = [ self.overlays.pinned ];
           boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
 
           # Binary cache

@@ -80,6 +80,9 @@
           overlays.default = final: prev: {
             cachyosKernels = loadPackages prev;
           };
+          overlays.pinned = final: prev: {
+            cachyosKernels = self.legacyPackages."${final.stdenv.hostPlatform.system}";
+          };
 
           hydraJobs.packages = self.packages;
 
@@ -92,7 +95,7 @@
                 (
                   { pkgs, config, ... }:
                   {
-                    nixpkgs.overlays = [ self.overlay ];
+                    nixpkgs.overlays = [ self.overlays.pinned ];
                     boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
 
                     # ZFS test
