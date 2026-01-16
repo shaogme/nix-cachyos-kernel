@@ -60,15 +60,24 @@ jobs:
           sudo systemctl daemon-reload
           sudo systemctl restart nix-daemon
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: zfs-updater
+
       - name: Build nix packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export TMPDIR=/nix/tmpdir
+          nix profile install nixpkgs#nix-prefetch-git
           nix-shell --run "npins update"
 
-          chmod +x zfs-cachyos/update.py
-          zfs-cachyos/update.py
+          cd zfs-updater
+          cargo run --release
 
       - name: Commit back to repository
         uses: stefanzweifel/git-auto-commit-action@v7

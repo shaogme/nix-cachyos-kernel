@@ -1,4 +1,4 @@
-name: "Build"
+name: "CI"
 on:
   pull_request:
   push:
@@ -16,3 +16,17 @@ jobs:
             extra-experimental-features = nix-command
       - name: Check evaluation
         run: nix-instantiate default.nix > /dev/null
+
+  test-zfs-updater:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: zfs-updater
+      - name: Run tests
+        working-directory: zfs-updater
+        run: cargo test
