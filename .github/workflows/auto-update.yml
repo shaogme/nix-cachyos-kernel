@@ -74,8 +74,9 @@ jobs:
         run: |
           export TMPDIR=/nix/tmpdir
           nix profile install nixpkgs#nix-prefetch-git
+          nix-shell --run "npins upgrade"
           nix-shell --run "npins update"
-
+          
           cd zfs-updater
           cargo run --release
 
