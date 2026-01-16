@@ -40,8 +40,8 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
-            experimental-features = nix-command flakes ca-derivations
-            extra-experimental-features = nix-command flakes ca-derivations
+            experimental-features = nix-command
+            extra-experimental-features = nix-command
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
             extra-platforms = i686-linux aarch64-linux arm-linux
             log-lines = 25
@@ -65,7 +65,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export TMPDIR=/nix/tmpdir
-          nix flake update
+          nix-shell --run "npins update"
 
           chmod +x zfs-cachyos/update.py
           zfs-cachyos/update.py
@@ -73,6 +73,6 @@ jobs:
       - name: Commit back to repository
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: 'Auto update flake'
+          commit_message: 'Auto update sources'
           commit_user_name: 'xddxdd-bot'
           commit_user_email: 'xddxdd-bot@users.noreply.github.com'
