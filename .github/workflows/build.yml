@@ -2,7 +2,7 @@ name: "Build"
 on:
   pull_request:
   push:
-    branches: [ master ]
+    branches: [ main ]
 jobs:
   check-evaluation:
     runs-on: ubuntu-latest
