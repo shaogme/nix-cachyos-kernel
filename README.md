@@ -2,8 +2,6 @@
 
 本项目致力于将 [CachyOS](https://cachyos.org/) 的高性能内核（包含 kernel-patches 和调优配置）移植到 NixOS 系统中。
 
-新的代码仓库地址：[https://github.com/shaogme/nix-cachyos-kernel](https://github.com/shaogme/nix-cachyos-kernel)
-
 ## 特性
 
 *   **高性能**: 集成 CachyOS 的各类优化补丁和配置。
