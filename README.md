@@ -1,139 +1,173 @@
-# CachyOS Kernel Nix 移植项目
+# Nix CachyOS Kernel
 
-本项目致力于将 CachyOS 的高性能内核（包含 [CachyOS 补丁集](https://github.com/CachyOS/kernel-patches) 和 [CachyOS 调优配置](https://github.com/CachyOS/linux-cachyos)）以及 [适配 CachyOS 的 ZFS 模块](https://github.com/CachyOS/zfs) 移植到 Nix/NixOS 系统中。
+本项目致力于将 [CachyOS](https://cachyos.org/) 的高性能内核（包含 kernel-patches 和调优配置）移植到 NixOS 系统中。
 
-[![built with garnix](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fgarnix.io%2Fapi%2Fbadges%2Fxddxdd%2Fnix-cachyos-kernel)](https://garnix.io/repo/xddxdd/nix-cachyos-kernel)
+新的代码仓库地址：[https://github.com/shaogme/nix-cachyos-kernel](https://github.com/shaogme/nix-cachyos-kernel)
 
-> **注意**: 如果 Garnix 显示 "all builds failed"，通常意味着免费构建时长已耗尽。我还有一个[私人 Hydra CI](https://hydra.lantian.pub/jobset/lantian/nix-cachyos-kernel) 在持续构建这些内核。
+## 特性
 
-## 提供的内核版本
+*   **高性能**: 集成 CachyOS 的各类优化补丁和配置。
+*   **多版本支持**:不仅包含最新的稳定版内核，还支持 LTO、Hardened 以及多种 CPU 调度器变体（如 BORE, EEVDF, SCX 等）。
+*   **二进制缓存**: 提供 Cachix 缓存，加速构建。
+*   **ZFS 支持**: 提供与内核版本匹配的 ZFS 模块。
 
-本项目提供以下内核变体，与 [CachyOS 上游定义](https://github.com/CachyOS/linux-cachyos?tab=readme-ov-file#kernel-variants--schedulers) 保持一致：
+## 使用方法
 
-*   **Latest (最新版)**: 提供多种 CPU 架构优化 (x86-64-v2/v3/v4) 及 LTO 变体。
-    *   `linux-cachyos-latest`
-    *   `linux-cachyos-latest-lto` (Clang + ThinLTO)
-    *   *(以及针对特定 CPU 微架构的版本，如 `zen4`, `x86_64-v3` 等)*
-*   **LTS (长期支持版)**: 
-    *   `linux-cachyos-lts`
-    *   `linux-cachyos-lts-lto`
-*   **特色调度器版本**:
-    *   `bmq`, `bore`, `eevdf`, `rt-bore` (实时内核)
-*   **硬件专用版**:
-    *   `deckify` (Steam Deck 优化)
-    *   `server` (服务器优化)
-    *   `hardened` (强化安全版)
+提供 **Flake** 和 **Npins** (即传统非 Flake) 两种使用方式。
 
-这些内核版本会自动与 Nixpkgs 保持同步。
+### 方式 1: Nix Flake (推荐)
 
-你可以运行 `nix-env -f . -qa` 或查看 `default.nix` 了解当前所有可用的包名。
+在你的 `flake.nix` 中添加输入源，并在 NixOS 配置中导入模块。
 
-## 如何使用
+1.  **添加 inputs**:
 
-### 1. 引入本项目
-
-由于本项目已移除 Flake 支持，推荐通过 `fetchTarball` 或 `npins` 等方式引入。
-
-**方法 A: 使用 `fetchTarball` (简单，适合不想折腾的用户)**
-
-在你的 NixOS 配置中：
-
-```nix
-{ pkgs, config, lib, ... }:
-let
-  nix-cachyos-kernel = import (builtins.fetchTarball "https://github.com/xddxdd/nix-cachyos-kernel/archive/master.tar.gz") {
-    inherit pkgs;
-  };
-in
-{
-  boot.kernelPackages = nix-cachyos-kernel.linuxPackages-cachyos-latest;
-  
-  # 如果需要 ZFS
-  boot.supportedFilesystems.zfs = true;
-  boot.zfs.package = nix-cachyos-kernel.zfs-cachyos;
-}
-```
-
-**方法 B: 使用 `npins` (推荐，可锁定版本)**
-
-1.  初始化 npins 并添加源:
-    ```bash
-    npins init
-    npins add github xddxdd/nix-cachyos-kernel
-    ```
-2.  在配置中导入:
     ```nix
-    { pkgs, ... }:
-    let
-      sources = import ./npins;
-      nix-cachyos-kernel = import sources.nix-cachyos-kernel { inherit pkgs; };
-    in
     {
-      boot.kernelPackages = nix-cachyos-kernel.linuxPackages-cachyos-latest;
+      inputs = {
+        nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+        
+        # 添加 CachyOS Kernel
+        cachyos-kernels.url = "github:shaogme/nix-cachyos-kernel";
+      };
+      
+      outputs = { self, nixpkgs, cachyos-kernels, ... }: {
+        nixosConfigurations.my-machine = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            # 导入模块
+            cachyos-kernels.nixosModules.default
+            ./configuration.nix
+          ];
+        };
+      };
     }
     ```
 
-### 2. 配置 ZFS
+2.  **配置系统 (configuration.nix)**:
 
-CachyOS 内核可能与标准 ZFS 模块不兼容，你需要使用本项目提供的 ZFS 包。
+    启用模块并选择内核：
 
-```nix
-{
-  boot.supportedFilesystems.zfs = true;
-  # 使用与当前选择的 CachyOS 内核匹配的 ZFS 模块
-  boot.zfs.package = nix-cachyos-kernel.zfs-cachyos;
-}
+    ```nix
+    { pkgs, ... }:
+    {
+      # 1. 启用 CachyOS Kernels 模块
+      # 这会自动添加 overlay 并配置二进制缓存 (Cachix)
+      services.cachyos-kernels.enable = true;
+
+      # 2. 选择内核
+      # 注意：内核包位于 pkgs.cachyosKernels 命名空间下
+      
+      # 示例：使用最新的 CachyOS 内核
+      boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
+
+      # 示例：使用带有 BORE 调度器的内核
+      # boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-bore;
+      
+      # 示例：启用 ZFS 支持
+      # boot.supportedFilesystems = [ "zfs" ];
+      # boot.zfs.package = pkgs.cachyosKernels.zfs_cachyos;
+    }
+    ```
+
+### 方式 2: Npins (传统方式)
+
+如果你不使用 Flakes，可以通过 `npins` 管理依赖。
+
+1.  **初始化并添加源**:
+
+    ```bash
+    npins init
+    npins add github shaogme nix-cachyos-kernel
+    ```
+
+2.  **配置系统**:
+
+    在你的 `configuration.nix` 或 `default.nix` 中导入模块：
+
+    ```nix
+    { pkgs, config, lib, ... }:
+    let
+      # 读取 npins 源
+      sources = import ./npins;
+      
+      # 获取 nix-cachyos-kernel 路径
+      cachyos-kernel-path = sources.nix-cachyos-kernel;
+    in
+    {
+      imports = [
+        # 从源码路径直接导入 NixOS 模块
+        "${cachyos-kernel-path}/module.nix"
+      ];
+
+      # 1. 启用模块
+      services.cachyos-kernels.enable = true;
+
+      # 2. 选择内核 (同样位于 pkgs.cachyosKernels 下)
+      boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
+    }
+    ```
+
+## 配置选项
+
+模块提供以下配置选项：
+
+*   `services.cachyos-kernels.enable`: (布尔值) 启用 CachyOS Kernels overlay 和必要的设置。默认为 `false`。
+*   `services.cachyos-kernels.useCachix`: (布尔值) 是否使用官方提供的 Cachix 二进制缓存 (`https://cachyos-kernels.cachix.org`)。默认为 `true`。
+
+## 提供的内核版本
+
+### Flake Outputs 列表
+
+```text
+└───packages
+    └───x86_64-linux
+        # Latest kernel, provide all LTO/CPU arch variants
+        ├───linux-cachyos-latest
+        ├───linux-cachyos-latest-x86_64-v2
+        ├───linux-cachyos-latest-x86_64-v3
+        ├───linux-cachyos-latest-x86_64-v4
+        ├───linux-cachyos-latest-zen4
+        ├───linux-cachyos-latest-lto
+        ├───linux-cachyos-latest-lto-x86_64-v2
+        ├───linux-cachyos-latest-lto-x86_64-v3
+        ├───linux-cachyos-latest-lto-x86_64-v4
+        ├───linux-cachyos-latest-lto-zen4
+        # LTS kernel, provide LTO variants
+        ├───linux-cachyos-lts
+        ├───linux-cachyos-lts-lto
+        # Additional CachyOS kernel variants
+        ├───linux-cachyos-bmq
+        ├───linux-cachyos-bmq-lto
+        ├───linux-cachyos-bore
+        ├───linux-cachyos-bore-lto
+        ├───linux-cachyos-deckify
+        ├───linux-cachyos-deckify-lto
+        ├───linux-cachyos-eevdf
+        ├───linux-cachyos-eevdf-lto
+        ├───linux-cachyos-hardened
+        ├───linux-cachyos-hardened-lto
+        ├───linux-cachyos-rc
+        ├───linux-cachyos-rc-lto
+        ├───linux-cachyos-rt-bore
+        ├───linux-cachyos-rt-bore-lto
+        ├───linux-cachyos-server
+        └───linux-cachyos-server-lto
 ```
 
-### 3. 使用二进制缓存 (Binary Cache)
+**注意**: 以上名称为 Flake `packages` 输出中的名称（即内核 Derivation 本身）。
+在 NixOS 配置 `boot.kernelPackages` 时，请使用对应的 `linuxPackages` 名称（通常加前缀 `linuxPackages-`）。
+例如：`linux-cachyos-latest` 对应 `pkgs.cachyosKernels.linuxPackages-cachyos-latest`。
 
-构建内核非常耗时。我通过 Hydra CI 构建内核并推送到 Attic 二进制缓存。
+## 二进制缓存
 
-要使用缓存，请添加以下配置：
+启用 `services.cachyos-kernels.enable = true` 后，默认会自动配置 Cachix 缓存：
 
-```nix
-{
-  nix.settings.substituters = [ "https://attic.xuyh0120.win/lantian" ];
-  nix.settings.trusted-public-keys = [ "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=" ];
-}
-```
+*   **URL**: `https://cachyos-kernels.cachix.org`
+*   **Public Key**: `cachyos-kernels.cachix.org-1:NmbrMDHqVswfrt4bSu9CTcCQwCgJA+ZfKG894X96RA8=`
 
-或者使用 Garnix 缓存（如果有构建的话）：
+这将大大缩短安装时间，避免本地编译内核。
 
-```nix
-{
-  nix.settings.substituters = [ "https://cache.garnix.io" ];
-  nix.settings.trusted-public-keys = [ "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g=" ];
-}
-```
+## 致谢
 
-## 常见问题
-
-### 内核构建失败？
-
-通常是因为 CachyOS 的补丁版本与 Nixpkgs 中的内核版本不匹配（例如上游已经到了 6.6.10，Nixpkgs 还在 6.6.9）。请等待一段时间，机器人会自动更新版本。
-
-### ZFS 构建失败？
-
-ZFS 对内核版本非常敏感。如果构建失败，通常是因为 CachyOS 尚未适配该内核版本的 ZFS 补丁。请耐心等待更新。
-
-## 高级用法：自定义内核
-
-你可以利用本项目的基础设施来构建自定义内核：
-
-```nix
-let
-  # 假设你已经引入了 nix-cachyos-kernel
-  customKernel = nix-cachyos-kernel.linux-cachyos-latest.override {
-    pname = "my-custom-kernel";
-    version = "6.12.34";
-    # 覆盖源码
-    src = pkgs.fetchurl { ... };
-    # 更多可调参数请参考 kernel-cachyos/mkCachyKernel.nix
-    lto = "full"; 
-    configVariant = "linux-cachyos"; 
-  };
-in
-# 获取对应的内核包集合
-pkgs.linuxKernel.packagesFor customKernel
-```
+*   [CachyOS Team](https://cachyos.org/)
+*   [linux-cachyos](https://github.com/CachyOS/linux-cachyos)

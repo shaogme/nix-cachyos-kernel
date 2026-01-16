@@ -50,5 +50,38 @@
       };
 
       nixosModules.default = import ./module.nix;
+
+      nixosConfigurations =
+        let
+          mkVM = kernelPkg: nixpkgs.lib.nixosSystem {
+            system = "x86_64-linux";
+            modules = [
+              self.nixosModules.default
+              ({ pkgs, ... }: {
+                boot.kernelPackages = pkgs.cachyosKernels.${kernelPkg};
+                
+                # Minimal configuration for VM
+                fileSystems."/" = {
+                  device = "none";
+                  fsType = "tmpfs";
+                };
+                
+                system.stateVersion = "24.05";
+                
+                users.users.root.password = "root";
+                services.openssh = {
+                    enable = true;
+                    settings.PermitRootLogin = "yes";
+                };
+              })
+            ];
+          };
+        in
+        {
+          "linux-cachyos-latest" = mkVM "linuxPackages-cachyos-latest";
+          "linux-cachyos-lts" = mkVM "linuxPackages-cachyos-lts";
+          "linux-cachyos-latest-lto" = mkVM "linuxPackages-cachyos-latest-lto";
+          "linux-cachyos-lts-lto" = mkVM "linuxPackages-cachyos-lts-lto";
+        };
     };
 }
