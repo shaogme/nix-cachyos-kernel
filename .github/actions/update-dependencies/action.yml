@@ -1,0 +1,87 @@
+name: 'Update Repository Dependencies'
+description: 'Updates npins, flake.lock, and ZFS versions with environment setup'
+inputs:
+  github_token:
+    description: 'GitHub Token for Nix configuration'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Maximize build space
+      uses: easimon/maximize-build-space@master
+      with:
+        root-reserve-mb: 8192
+        temp-reserve-mb: 1024
+        swap-size-mb: 4096
+        build-mount-path: '/nix'
+        remove-dotnet: 'true'
+        remove-android: 'true'
+        remove-haskell: 'true'
+        remove-codeql: 'true'
+        remove-docker-images: 'true'
+
+    # Checkout is handled by the caller workflow to allow specific branch selection
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+      with:
+        image: tonistiigi/binfmt:latest
+        platforms: all
+
+    - name: Install nix
+      uses: cachix/install-nix-action@v31
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+          extra-experimental-features = nix-command flakes
+          access-tokens = github.com=${{ inputs.github_token }}
+          extra-platforms = i686-linux aarch64-linux arm-linux
+          log-lines = 25
+
+    - name: Set nix daemon tmpdir path
+      shell: bash
+      run: |
+        sudo mkdir -p /nix/tmpdir
+        sudo chown "$(whoami)" /nix/tmpdir
+
+        cat > override.conf <<EOF
+        [Service]
+        Environment="TMPDIR=/nix/tmpdir"
+        EOF
+        sudo mkdir /etc/systemd/system/nix-daemon.service.d/
+        sudo mv override.conf /etc/systemd/system/nix-daemon.service.d/override.conf
+        sudo systemctl daemon-reload
+        sudo systemctl restart nix-daemon
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: zfs-updater
+
+    - name: Update Dependencies (Flake, Npins, ZFS)
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        export TMPDIR=/nix/tmpdir
+        
+        # 1. Update npins
+        echo "Updating npins..."
+        nix profile install nixpkgs#npins nixpkgs#nix-prefetch-git
+        nix-shell --run "npins upgrade"
+        nix-shell --run "npins update"
+        
+        # 2. Update flake.lock
+        echo "Updating flake.lock..."
+        nix flake update
+        
+        # 3. Update ZFS versions
+        echo "Updating ZFS..."
+        cd zfs-updater
+        cargo run --release
+        cd ..

@@ -1,0 +1,52 @@
+name: 'Daily Auto Update'
+on:
+  schedule:
+    - cron: '37 17 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  daily-update:
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [main, dev]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+          fetch-depth: 0
+
+      - name: Run Update Action
+        uses: ./.github/actions/update-dependencies
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.PAT }}
+          commit-message: "chore: daily auto-update for ${{ matrix.branch }}"
+          title: "chore: daily auto-update for ${{ matrix.branch }}"
+          body: |
+            Automated dependency updates for ${{ matrix.branch }}.
+            - Updated npins
+            - Updated flake.lock
+            - Updated ZFS versions
+          branch: "auto-update/${{ matrix.branch }}"
+          base: "${{ matrix.branch }}"
+          delete-branch: true
+          signoff: true
+
+      - name: Enable Auto Merge
+        if: steps.cpr.outputs.pull-request-operation == 'created'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.cpr.outputs.pull-request-number }}" --auto --squash

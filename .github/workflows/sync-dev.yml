@@ -1,0 +1,41 @@
+name: 'Sync specific branch to dev'
+on:
+  push:
+    branches: [ no_update ]
+
+permissions:
+  contents: write
+
+jobs:
+  sync-to-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: no_update
+          fetch-depth: 0
+
+      - name: Run Update Action
+        uses: ./.github/actions/update-dependencies
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Force push to dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Check if there are modified files
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "Updates detected. Amending commit..."
+            git add .
+            git commit --amend --no-edit
+          else
+            echo "No dependency updates needed. Pushing original commit..."
+          fi
+            
+          echo "Force pushing to dev..."
+          git push origin HEAD:dev --force

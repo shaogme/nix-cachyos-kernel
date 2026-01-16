@@ -139,7 +139,8 @@ lib.makeOverridable (
       # 应用基础的内核选项
       (with lib.kernel; {
         # 设置最大 CPU 数量
-        NR_CPUS = lib.mkForce (option (freeform "8192"));
+        NR_CPUS = lib.mkForce (option (freeform "512"));
+
         # 设置本地版本后缀
         LOCALVERSION = freeform defaultLocalVersion;
 
