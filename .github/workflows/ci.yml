@@ -1,7 +1,6 @@
 name: "CI"
 on:
   pull_request:
-  push:
     branches: [ main ]
 jobs:
   check-evaluation:
@@ -30,3 +29,41 @@ jobs:
       - name: Run tests
         working-directory: zfs-updater
         run: cargo test
+
+  build-kernels:
+    needs: [check-evaluation, test-zfs-updater]
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel:
+          - linux-cachyos-latest
+          - linux-cachyos-lts
+          - linux-cachyos-latest-lto
+          - linux-cachyos-lts-lto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 8192
+          temp-reserve-mb: 1024
+          swap-size-mb: 4096
+          build-mount-path: '/nix'
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command
+            extra-experimental-features = nix-command
+      - uses: cachix/cachix-action@v16
+        with:
+          name: cachyos-kernels
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Build ${{ matrix.kernel }}
+        run: nix-build default.nix -A ${{ matrix.kernel }}

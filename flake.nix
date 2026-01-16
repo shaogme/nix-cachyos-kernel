@@ -48,5 +48,7 @@
           inherit inputs;
         };
       };
+
+      nixosModules.default = import ./module.nix;
     };
 }
