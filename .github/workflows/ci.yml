@@ -67,3 +67,13 @@ jobs:
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Build ${{ matrix.kernel }}
         run: nix-build default.nix -A ${{ matrix.kernel }}
+
+  check-pass:
+    runs-on: ubuntu-latest
+    needs: [check-evaluation, test-zfs-updater, build-kernels]
+    if: always()
+    steps:
+      - name: Check pipeline status
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1
+      - run: echo "All checks passed!"
