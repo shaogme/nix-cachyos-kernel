@@ -48,7 +48,7 @@ jobs:
         with:
           root-reserve-mb: 8192
           temp-reserve-mb: 1024
-          swap-size-mb: 4096
+          swap-size-mb: 16384
           build-mount-path: '/nix'
           remove-dotnet: 'true'
           remove-android: 'true'
