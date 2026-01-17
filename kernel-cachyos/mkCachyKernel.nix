@@ -6,6 +6,7 @@
   stdenv,
   kernelPatches,
   applyPatches,
+  impureUseNativeOptimizations,
   ...
 }:
 lib.makeOverridable (
@@ -147,7 +148,12 @@ lib.makeOverridable (
     // {
       inherit pname version;
       src = patchedSrc;
-      stdenv = args.stdenv or (if lto == "none" then stdenv else stdenvLLVM);
+
+      stdenv =
+        # Apply native optimization on top of stdenv if requested
+        (if processorOpt == "native" then impureUseNativeOptimizations else lib.id)
+          # Select stdenv/stdenvLLVM based on requested compiler
+          (args.stdenv or (if lto == "none" then stdenv else stdenvLLVM));
 
       extraMakeFlags = (lib.optionals (lto != "none") ltoMakeflags) ++ (args.extraMakeFlags or [ ]);
 
