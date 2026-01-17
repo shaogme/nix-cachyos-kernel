@@ -243,9 +243,68 @@ If you want to construct your own `linuxPackages` attrset with `linuxKernel.pack
 
 In most cases, failing to build ZFS module is caused by CachyOS not updating patches for the latest kernel version. The only option is to wait for CachyOS team to update the patches.
 
-## How to apply CachyOS patches on your own kernel
+## How to customize CachyOS kernel
 
-The kernels provided in this flake can be overridden to use your own kernel source. This is helpful if you want to use a kernel version not available in Nixpkgs.
+The kernels provided in this flake can be overridden to use your own kernel source. This is helpful if you want to use a kernel version not available in Nixpkgs, or customize CachyOS optimization settings in [kernel-cachyos/mkCachyKernel.nix](kernel-cachyos/mkCachyKernel.nix).
+
+### Available Arguments
+
+The following arguments can be passed to `mkCachyKernel`:
+
+#### Required Arguments
+
+- **`pname`**: Package name for the kernel
+- **`version`**: Kernel version string
+- **`src`**: Kernel source derivation
+- **`configVariant`**: Kernel config variant to use as defconfig (e.g., `"linux-cachyos-lts"`). See [CachyOS linux-cachyos repo](https://github.com/CachyOS/linux-cachyos) for available values.
+
+#### Optional Arguments
+
+**Compiler & Optimization:**
+
+- **`lto`**: Link-Time Optimization setting. Options: `"none"` (default), `"thin"`, or `"full"`. Non-`"none"` values use Clang.
+- **`processorOpt`**: Processor optimization level. Options: `"x86_64-v1"` (default), `"x86_64-v2"`, `"x86_64-v3"`, `"x86_64-v4"`, `"zen4"`, or `"native"` (requires impure environment).
+- **`autofdo`**: AutoFDO (Automatic Feedback-Directed Optimization) settings. Options:
+  - `false` (default): Disable AutoFDO
+  - `true`: Enable AutoFDO for profiling performance patterns only
+  - `./path/to/autofdo/profile`: Enable AutoFDO with specified profile (requires `lto != "none"`)
+
+> AutoFDO hasn't been fully tested. Please report issue if you encounter any.
+
+**CachyOS Fine Tuning Settings:**
+
+- **`cpusched`**: CPU scheduler. Options: `"bore"` (default), `"bmq"`, or `null` to disable.
+- **`kcfi`**: Enable Kernel Control Flow Integrity. Default: `false`.
+- **`hzTicks`**: Timer frequency. Options: `"1000"` (default), `"250"`, `"300"`, `"500"`, `"750"`, or `null` to disable.
+- **`performanceGovernor`**: Enable performance governor. Default: `false`.
+- **`tickrate`**: Tick rate. Options: `"full"` (default), `"periodic"`, `"idle"`, `"nohz_full"`, or `null` to disable.
+- **`preemptType`**: Preemption type. Options: `"full"` (default), `"voluntary"`, `"none"`, or `null` to disable.
+- **`ccHarder`**: Enable harder compiler optimizations. Default: `true`.
+- **`bbr3`**: Enable BBR3 TCP congestion control. Default: `false`.
+- **`hugepage`**: Huge page settings. Options: `"always"` (default), `"madvise"`, `"never"`, or `null` to disable.
+
+**CachyOS Additional Patch Settings:**
+
+- **`hardened`**: Apply hardened security patches. Default: `false`.
+- **`rt`**: Apply real-time patches. Default: `false`.
+- **`acpiCall`**: Apply ACPI call patches. Default: `false`.
+- **`handheld`**: Apply handheld-specific patches. Default: `false`.
+
+**Patch Control:**
+
+- **`prePatch`**: Shell commands to run before applying patches. Default: `""`.
+- **`patches`**: List of additional patches to apply. Default: `[ ]`.
+- **`postPatch`**: Shell commands to run after applying patches. Default: `""`.
+
+**Module Settings:**
+
+- **`autoModules`**: Build as many components as possible as kernel modules, including disabled ones. Default: `true`.
+
+**Other Options:**
+
+Additional arguments are passed through to `buildLinux` from nixpkgs. See [nixpkgs/pkgs/os-specific/linux/kernel/generic.nix](https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/kernel/generic.nix) for available options.
+
+### Example Usage
 
 ```nix
 {
@@ -255,18 +314,28 @@ The kernels provided in this flake can be overridden to use your own kernel sour
     src = pkgs.fetchurl {
       # ...
     };
+
+    # Customize CachyOS settings
+    cpusched = "bore";
+    lto = "thin";
+    processorOpt = "x86_64-v3";
+    hzTicks = "1000";
+    bbr3 = true;
+    hardened = false;
+
     # Additional args are available. See kernel-cachyos/mkCachyKernel.nix
   };
 
   # For non-LTO kernels
   kernelPackages = pkgs.linuxKernel.packagesFor kernel;
 
-  # helpers.nix provides a few utilities for building kernel with LTO.
-  # I haven't figured out a clean way to expose it in flakes.
-  helpers = pkgs.callPackage "${inputs.nix-cachyos-kernel.outPath}/helpers.nix" {};
 
   # For LTO kernels, helpers.kernelModuleLLVMOverride fixes compilation for some
   # out-of-tree modules in nixpkgs.
-  kernelPackagesWithLTOFix = helpers.kernelModuleLLVMOverride (pkgs.linuxKernel.packagesFor kernel);
+  kernelPackagesWithLTOFix = let
+    # helpers.nix provides a few utilities for building kernel with LTO.
+    # I haven't figured out a clean way to expose it in flakes.
+    helpers = pkgs.callPackage "${inputs.nix-cachyos-kernel.outPath}/helpers.nix" {};
+  in helpers.kernelModuleLLVMOverride (pkgs.linuxKernel.packagesFor kernel);
 }
 ```
