@@ -38,7 +38,6 @@ jobs:
         kernel:
           - linux-cachyos-latest
           - linux-cachyos-lts
-          - linux-cachyos-latest-lto
           - linux-cachyos-lts-lto
     runs-on: ubuntu-latest
     steps:
