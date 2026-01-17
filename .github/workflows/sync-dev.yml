@@ -15,15 +15,16 @@ jobs:
         with:
           ref: no_update
           fetch-depth: 0
+          token: ${{ secrets.PAT }}
 
       - name: Run Update Action
         uses: ./.github/actions/update-dependencies
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.PAT }}
 
       - name: Force push to dev
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
