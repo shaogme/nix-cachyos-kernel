@@ -1,0 +1,8 @@
+builds:
+  # Only build most common configs to save build minutes
+  include:
+    - packages.x86_64-linux.linux-cachyos-latest
+    - packages.x86_64-linux.linux-cachyos-latest-lto
+    - packages.x86_64-linux.linux-cachyos-lts
+    - packages.x86_64-linux.linux-cachyos-lts-lto
+  exclude: []

@@ -48,7 +48,7 @@ jobs:
         with:
           root-reserve-mb: 8192
           temp-reserve-mb: 1024
-          swap-size-mb: 16384
+          swap-size-mb: 4096
           build-mount-path: '/nix'
           remove-dotnet: 'true'
           remove-android: 'true'
@@ -76,7 +76,6 @@ jobs:
         kernel:
           - linux-cachyos-latest
           - linux-cachyos-lts
-          - linux-cachyos-latest-lto
           - linux-cachyos-lts-lto
     runs-on: ubuntu-latest
     steps:
