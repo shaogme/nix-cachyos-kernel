@@ -87,14 +87,20 @@
           };
 
           mkCachyKernel =
-            { buildLinux, pkgs, ... } @ args:
+            { buildLinux, pkgs, ... }@args:
             (import ./kernel-cachyos/mkCachyKernel.nix) {
-              inherit inputs lib buildLinux args;
+              inherit
+                inputs
+                lib
+                buildLinux
+                args
+                ;
               inherit (pkgs)
                 stdenv
-		callPackage
+                callPackage
                 kernelPatches
                 applyPatches
+                impureUseNativeOptimizations
                 ;
             };
 
