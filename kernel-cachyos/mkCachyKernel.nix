@@ -75,14 +75,6 @@ lib.makeOverridable (
     # ./path/to/autofdo/profile: Enable AutoFDO with specified profile
     autofdo ? false,
 
-    # AutoFDO settings
-    # AutoFDO hasn't been fully tested. Please report issue if you encounter any.
-    #
-    # false - Disable AutoFDO
-    # true - Enable AutoFDO for profiling performance patterns only
-    # ./path/to/autofdo/profile: Enable AutoFDO with specified profile
-    autofdo ? false,
-
     # 尽可能将组件构建为内核模块，即使是通常禁用的组件。
     # 这可能会启用一些意外的模块，例如 nova_core。
     # 参见: https://github.com/xddxdd/nix-cachyos-kernel/issues/13
