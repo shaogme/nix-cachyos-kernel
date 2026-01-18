@@ -27,8 +27,8 @@ rec {
     "OBJCOPY=${buildLLVM.llvm}/bin/llvm-objcopy"
     "OBJDUMP=${buildLLVM.llvm}/bin/llvm-objdump"
     "READELF=${buildLLVM.llvm}/bin/llvm-readelf"
-    "HOSTCC=${hostLLVM.clangUseLLVM.cc}/bin/clang"
-    "HOSTCXX=${hostLLVM.clangUseLLVM.cc}/bin/clang++"
+    "HOSTCC=${hostLLVM.clangUseLLVM}/bin/clang"
+    "HOSTCXX=${hostLLVM.clangUseLLVM}/bin/clang++"
   ];
 
   stdenvLLVM =
