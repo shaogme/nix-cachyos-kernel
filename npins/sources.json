@@ -9,9 +9,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "8e4d77a4aeef28c8e93fd9b724d61a84b11b384f",
-      "url": "https://github.com/CachyOS/linux-cachyos/archive/8e4d77a4aeef28c8e93fd9b724d61a84b11b384f.tar.gz",
-      "hash": "sha256-BpTer/+8ZSHq4hXbfN/DZh1rru3LVCapp6ks1nyuWj0="
+      "revision": "4d7506c820f0d18fc0bbc36ecfec8ed126aee682",
+      "url": "https://github.com/CachyOS/linux-cachyos/archive/4d7506c820f0d18fc0bbc36ecfec8ed126aee682.tar.gz",
+      "hash": "sha256-n9peTL7TAv1FIsboTEE1nWvuY2HYB67Jhh8o4O/JGfY="
     },
     "cachyos-kernel-patches": {
       "type": "Git",
@@ -22,9 +22,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "af948449e6e97afbac82dc9887e2b2b95d1a6519",
-      "url": "https://github.com/CachyOS/kernel-patches/archive/af948449e6e97afbac82dc9887e2b2b95d1a6519.tar.gz",
-      "hash": "sha256-XDKI0POpjvQsTitsFyhn9LB2ufOGGYzrTTPY7z8lESk="
+      "revision": "cba022ec33a81d60a1e2c9fe4622196e3fef2b54",
+      "url": "https://github.com/CachyOS/kernel-patches/archive/cba022ec33a81d60a1e2c9fe4622196e3fef2b54.tar.gz",
+      "hash": "sha256-XKQ3DHUnaa/00BfIaY6K8xCZgx0Sy2wXQbNYE/AmWSk="
     }
   },
   "version": 7
