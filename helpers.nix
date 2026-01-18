@@ -13,11 +13,11 @@ rec {
   };
   hostLLVM = pkgs.pkgsBuildHost.llvmPackages.override noBintools;
   buildLLVM = pkgs.pkgsBuildBuild.llvmPackages.override noBintools;
-
+  
   ltoMakeflags = [
     "LLVM=1"
     "LLVM_IAS=1"
-    "CC=${buildLLVM.clangUseLLVM}/bin/clang"
+    "CC=${buildLLVM.clangUseLLVM.cc}/bin/clang"
     "LD=${buildLLVM.lld}/bin/ld.lld"
     "HOSTLD=${hostLLVM.lld}/bin/ld.lld"
     "AR=${buildLLVM.llvm}/bin/llvm-ar"
@@ -27,8 +27,8 @@ rec {
     "OBJCOPY=${buildLLVM.llvm}/bin/llvm-objcopy"
     "OBJDUMP=${buildLLVM.llvm}/bin/llvm-objdump"
     "READELF=${buildLLVM.llvm}/bin/llvm-readelf"
-    "HOSTCC=${hostLLVM.clangUseLLVM}/bin/clang"
-    "HOSTCXX=${hostLLVM.clangUseLLVM}/bin/clang++"
+    "HOSTCC=${hostLLVM.clangUseLLVM.cc}/bin/clang"
+    "HOSTCXX=${hostLLVM.clangUseLLVM.cc}/bin/clang++"
   ];
 
   stdenvLLVM =
