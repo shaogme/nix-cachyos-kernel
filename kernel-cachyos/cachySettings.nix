@@ -127,6 +127,10 @@ with lib.kernel;
       MZEN4 = yes;
       X86_NATIVE_CPU = no;
     };
+    native = {
+      GENERIC_CPU = no;
+      X86_NATIVE_CPU = yes;
+    };
   };
 
   # 时钟滴答率 (Tick Rate) / NO_HZ 设置

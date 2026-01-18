@@ -6,6 +6,7 @@
   stdenv,
   kernelPatches,
   applyPatches,
+  impureUseNativeOptimizations,
   ...
 }:
 # 这是一个构建函数，用于生成定制化的 CachyOS 内核。
@@ -66,6 +67,22 @@ lib.makeOverridable (
     # 是否启用掌机优化补丁 (Handheld)
     handheld ? false,
 
+    # AutoFDO settings
+    # AutoFDO hasn't been fully tested. Please report issue if you encounter any.
+    #
+    # false - Disable AutoFDO
+    # true - Enable AutoFDO for profiling performance patterns only
+    # ./path/to/autofdo/profile: Enable AutoFDO with specified profile
+    autofdo ? false,
+
+    # AutoFDO settings
+    # AutoFDO hasn't been fully tested. Please report issue if you encounter any.
+    #
+    # false - Disable AutoFDO
+    # true - Enable AutoFDO for profiling performance patterns only
+    # ./path/to/autofdo/profile: Enable AutoFDO with specified profile
+    autofdo ? false,
+
     # 尽可能将组件构建为内核模块，即使是通常禁用的组件。
     # 这可能会启用一些意外的模块，例如 nova_core。
     # 参见: https://github.com/xddxdd/nix-cachyos-kernel/issues/13
@@ -77,6 +94,10 @@ lib.makeOverridable (
     # 更多选项请参考 nixpkgs/pkgs/os-specific/linux/kernel/generic.nix。
     ...
   }@args:
+
+  # AutoFDO requires Clang compiler
+  assert autofdo != false -> lto != "none";
+
   let
     # 引入辅助函数
     helpers = callPackage ../helpers.nix { };
@@ -181,6 +202,9 @@ lib.makeOverridable (
         // (lib.optionalAttrs (hugepage != null) cachySettings.hugepage."${hugepage}")
         # 处理器架构优化设置
         // (lib.optionalAttrs (processorOpt != null) cachySettings.processorOpt.${processorOpt})
+        // (lib.optionalAttrs (autofdo != false) {
+          AUTOFDO_CLANG = lib.kernel.yes;
+        })
       ))
 
       # 应用用户通过参数传入的额外配置
@@ -201,12 +225,19 @@ lib.makeOverridable (
     // {
       inherit pname version;
       src = patchedSrc;
-      
-      # 如果启用了 LTO，使用 stdenvLLVM (Clang)，否则使用默认环境 (GCC)
-      stdenv = args.stdenv or (if lto == "none" then stdenv else stdenvLLVM);
 
-      # 如果启用了 LTO，添加 LTO 相关的 Make 标志
-      extraMakeFlags = (lib.optionals (lto != "none") ltoMakeflags) ++ (args.extraMakeFlags or [ ]);
+      stdenv =
+        # Apply native optimization on top of stdenv if requested
+        (if processorOpt == "native" then impureUseNativeOptimizations else lib.id)
+          # Select stdenv/stdenvLLVM based on requested compiler
+          (args.stdenv or (if lto == "none" then stdenv else stdenvLLVM));
+
+      extraMakeFlags =
+        (lib.optionals (lto != "none") ltoMakeflags)
+        ++ lib.optionals (builtins.isPath autofdo) [
+          "CLANG_AUTOFDO_PROFILE=${autofdo}"
+        ]
+        ++ (args.extraMakeFlags or [ ]);
 
       # 指定 defconfig 文件名
       defconfig = args.defconfig or "cachyos_defconfig";
