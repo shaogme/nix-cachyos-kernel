@@ -38,7 +38,6 @@ jobs:
         kernel:
           - linux-cachyos-latest
           - linux-cachyos-lts
-          - linux-cachyos-lts-lto
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +74,6 @@ jobs:
         kernel:
           - linux-cachyos-latest
           - linux-cachyos-lts
-          - linux-cachyos-lts-lto
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
