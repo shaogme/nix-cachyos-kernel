@@ -22,9 +22,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "d2f1d070c0303b3b2bcb71df73c623a274258e22",
-      "url": "https://github.com/CachyOS/kernel-patches/archive/d2f1d070c0303b3b2bcb71df73c623a274258e22.tar.gz",
-      "hash": "sha256-OsO2Pi2oDE2hZoxCJ40mx9/wag9XXQ5FkcwIUcJN4Go="
+      "revision": "5f061ab9733ad15eccf6b9995e9d56f572e67266",
+      "url": "https://github.com/CachyOS/kernel-patches/archive/5f061ab9733ad15eccf6b9995e9d56f572e67266.tar.gz",
+      "hash": "sha256-fPOlnH9arzQLmkbaZ6p+otwLuH9YEf/t8Q2o9/Yq/YA="
     }
   },
   "version": 7
